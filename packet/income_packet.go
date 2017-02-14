@@ -11,12 +11,16 @@ func (packet IncomePacket) ToBytes() (result []byte) {
 	return retVal
 }
 
+func (packet IncomePacket) GetType() (result string) {
+	return TypeIntString[int(packet.Identifier)]
+}
+
 func ParseIncomePacket(raw []byte) (result IncomePacket, err error) {
 	if len(raw) != 4 {
 		return nil, errors.New("Invalid Packet Length")
 	}
 
-	return IncomePacket {
+	return IncomePacket{
 		Identifier: raw[2],
 	}, nil
 }
