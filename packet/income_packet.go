@@ -1,4 +1,4 @@
-package signalize
+package packet
 
 import "errors"
 
@@ -17,7 +17,7 @@ func (packet IncomePacket) GetType() (result string) {
 
 func ParseIncomePacket(raw []byte) (result IncomePacket, err error) {
 	if len(raw) != 4 {
-		return nil, errors.New("Invalid Packet Length")
+		return IncomePacket{}, errors.New("Invalid Packet Length")
 	}
 
 	return IncomePacket{

@@ -1,4 +1,4 @@
-package signalize
+package packet
 
 var TypeIntString = map[int]string{
 	31:  "IntelliVent Modes",

@@ -1,4 +1,4 @@
-package signalize
+package packet
 
 import "errors"
 
@@ -151,5 +151,5 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 		}
 	}
 
-	return nil, errors.New("Invalid Outcome Packet!")
+	return OutcomePacket{}, errors.New("Invalid Outcome Packet!")
 }
