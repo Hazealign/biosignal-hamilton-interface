@@ -21,6 +21,6 @@ func ParseIncomePacket(raw []byte) (result IncomePacket, err error) {
 	}
 
 	return IncomePacket{
-		Identifier: raw[2],
+		Identifier: raw[1],
 	}, nil
 }

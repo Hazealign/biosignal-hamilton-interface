@@ -1,6 +1,9 @@
 package packet
 
-import "errors"
+import (
+	"errors"
+	"reflect"
+)
 
 type OutcomePacket struct {
 	// Important Values
@@ -71,6 +74,17 @@ func (packet OutcomePacket) ToBytes() (result []byte) {
 }
 
 func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
+	var rerror = []byte{
+		0x02, 0x52, 0x45, 0x52, 0x52, 0x4F, 0x52, 0x03, 0x0D,
+	}
+
+	// 0. Check packet is rerror
+	if reflect.DeepEqual(rerror, raw) {
+		return OutcomePacket{
+			ResponseType: RESP_TYPE_RERROR,
+		}, nil
+	}
+
 	// 1. check raw packet's length
 	if len(raw) == 8 {
 		return OutcomePacket{
@@ -116,13 +130,13 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 	var flag = 0
 	if len(raw) == 9 {
 		var identifier = int(raw[1])
-		if identifier <= 30 && identifier >= 33 {
+		if identifier >= 30 && identifier <= 33 {
 			flag = RESP_TYPE_A
-		} else if identifier <= 35 && identifier >= 119 {
+		} else if identifier >= 35 && identifier <= 119 {
 			flag = RESP_TYPE_A
-		} else if identifier <= 121 && identifier >= 123 {
+		} else if identifier >= 121 && identifier <= 123 {
 			flag = RESP_TYPE_A
-		} else if identifier <= 124 && identifier >= 127 {
+		} else if identifier >= 124 && identifier <= 127 {
 			flag = RESP_TYPE_B_FORMAT_1
 		} else {
 			flag = RESP_TYPE_B_FORMAT_2
@@ -133,20 +147,20 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 			return OutcomePacket{
 				ResponseType: RESP_TYPE_A,
 				Identifier:   raw[1],
-				Values:       raw[2:6],
+				Values:       raw[2:7],
 			}, nil
 		case RESP_TYPE_B_FORMAT_1:
 			return OutcomePacket{
 				ResponseType:     RESP_TYPE_B_FORMAT_1,
 				Identifier:       raw[1],
 				DeviceIdentifier: []byte{raw[2]},
-				Values:           raw[3:6],
+				Values:           raw[3:7],
 			}, nil
 		case RESP_TYPE_B_FORMAT_2:
 			return OutcomePacket{
 				ResponseType:     RESP_TYPE_B_FORMAT_2,
-				DeviceIdentifier: raw[1:2],
-				Values:           raw[2:6],
+				DeviceIdentifier: raw[1:3],
+				Values:           raw[2:7],
 			}, nil
 		}
 	}
