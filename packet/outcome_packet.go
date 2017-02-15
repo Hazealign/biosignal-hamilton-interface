@@ -27,11 +27,11 @@ type OutcomePacket struct {
 }
 
 func (packet OutcomePacket) ToBytes() (result []byte) {
-	var rerror = []byte{
+	var r_error = []byte{
 		0x02, 0x52, 0x45, 0x52, 0x52, 0x4F, 0x52, 0x03, 0x0D,
 	}
 
-	switch packet.Identifier {
+	switch packet.ResponseType {
 	case RESP_TYPE_A:
 		var retVal = []byte{0x02, packet.Identifier}
 		retVal = append(retVal, packet.Values...)
@@ -45,6 +45,10 @@ func (packet OutcomePacket) ToBytes() (result []byte) {
 		retVal = append(retVal, []byte{0x03, 0x0D}...)
 		return retVal
 	case RESP_TYPE_B_FORMAT_2:
+		var retVal = append([]byte{0x02}, packet.DeviceIdentifier...)
+		retVal = append(retVal, packet.Values...)
+		retVal = append(retVal, []byte{0x03, 0x0D}...)
+		return retVal
 	case RESP_TYPE_B_FORMAT_3:
 		var retVal = append([]byte{0x02}, packet.DeviceIdentifier...)
 		retVal = append(retVal, packet.Values...)
@@ -70,7 +74,7 @@ func (packet OutcomePacket) ToBytes() (result []byte) {
 		}
 	}
 
-	return rerror
+	return r_error
 }
 
 func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
@@ -90,7 +94,7 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 		return OutcomePacket{
 			ResponseType:     RESP_TYPE_B_FORMAT_3,
 			DeviceIdentifier: []byte{raw[1]},
-			Values:           raw[2:5],
+			Values:           raw[2:6],
 		}, nil
 	}
 
@@ -130,7 +134,11 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 	var flag = 0
 	if len(raw) == 9 {
 		var identifier = int(raw[1])
-		if identifier >= 30 && identifier <= 33 {
+
+		if identifier == int(0x41) || identifier == int(0x56) || identifier == int(0x42) ||
+			identifier == int(0x52) || identifier == int(0x43) {
+			flag = RESP_TYPE_B_FORMAT_2
+		} else if identifier >= 30 && identifier <= 33 {
 			flag = RESP_TYPE_A
 		} else if identifier >= 35 && identifier <= 119 {
 			flag = RESP_TYPE_A
@@ -139,7 +147,7 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 		} else if identifier >= 124 && identifier <= 127 {
 			flag = RESP_TYPE_B_FORMAT_1
 		} else {
-			flag = RESP_TYPE_B_FORMAT_2
+			return OutcomePacket{}, errors.New("Invalid Outcome Packet!")
 		}
 
 		switch flag {
@@ -160,7 +168,7 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 			return OutcomePacket{
 				ResponseType:     RESP_TYPE_B_FORMAT_2,
 				DeviceIdentifier: raw[1:3],
-				Values:           raw[2:7],
+				Values:           raw[3:7],
 			}, nil
 		}
 	}
