@@ -4,6 +4,8 @@ import (
 	"os"
 	"time"
 
+	"biosignal-hamilton-interface/packet"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/jessevdk/go-flags"
 	"github.com/tarm/serial"
@@ -42,6 +44,36 @@ func main() {
 	}
 
 	serial := OpenPort(config)
+
+	serial.Write(packet.IncomePacket{
+		Identifier: 0x56,
+	}.ToBytes())
+
+	result, err := ReadFromSerial(serial)
+	if err != nil {
+		log.Errorln("에러가 발생했습니다.")
+		log.Errorln(err)
+		os.Exit(1)
+	}
+
+	log.Debug("Data Input")
+	log.Debug(result)
+
+	for {
+		serial.Write(packet.IncomePacket{
+			Identifier: 120,
+		}.ToBytes())
+
+		result, err := ReadFromSerial(serial)
+		if err != nil {
+			log.Errorln("에러가 발생했습니다.")
+			log.Errorln(err)
+			os.Exit(1)
+		}
+
+		log.Debug("기기에서 전송된 데이터: ")
+		log.Debug(result)
+	}
 }
 
 func OpenPort(config *serial.Config) (socket *serial.Port) {
@@ -61,4 +93,14 @@ func OpenPort(config *serial.Config) (socket *serial.Port) {
 	}
 
 	return socket
+}
+
+func ReadFromSerial(serial *serial.Port) (buf []byte, err error) {
+	tmp_buffer := make([]byte, 1024)
+	n, err := serial.Read(tmp_buffer)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return tmp_buffer[:n], nil
 }

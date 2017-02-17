@@ -46,7 +46,7 @@ var IncomePacket = Describe("Income Packet", func() {
 	})
 })
 
-var OutcomePacket_Decoder = Describe("Outcome Packet Decoder", func() {
+var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	// Check Invalid Packet
 	It("Decoding - Invalid", func() {
 		var bytes = []byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD}

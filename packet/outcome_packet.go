@@ -78,12 +78,12 @@ func (packet OutcomePacket) ToBytes() (result []byte) {
 }
 
 func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
-	var rerror = []byte{
+	var r_error = []byte{
 		0x02, 0x52, 0x45, 0x52, 0x52, 0x4F, 0x52, 0x03, 0x0D,
 	}
 
 	// 0. Check packet is rerror
-	if reflect.DeepEqual(rerror, raw) {
+	if reflect.DeepEqual(r_error, raw) {
 		return OutcomePacket{
 			ResponseType: RESP_TYPE_RERROR,
 		}, nil
