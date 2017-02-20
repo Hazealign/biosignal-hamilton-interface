@@ -18,21 +18,19 @@ var Options struct {
 
 var log = logrus.New()
 
-func init() {
-	log.Formatter = new(logrus.TextFormatter)
-	logrus.SetOutput(log.Writer())
-}
-
 func main() {
+	log.Formatter = new(logrus.TextFormatter)
+	log.Out = os.Stdout
+
 	if _, err := flags.ParseArgs(&Options, os.Args); err != nil {
 		log.Errorln("포트 번호가 명시되지 않았습니다")
 		log.Errorln(err)
 		os.Exit(1)
 	} else {
 		if Options.Debug {
-			logrus.SetLevel(logrus.InfoLevel)
+			log.Level = logrus.InfoLevel
 		} else {
-			logrus.SetLevel(logrus.ErrorLevel)
+			log.Level = logrus.ErrorLevel
 		}
 	}
 
@@ -56,8 +54,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	pkt, err := packet.ParseOutcomePacket(result)
+	if err != nil {
+		log.Errorln("에러가 발생했습니다.")
+		log.Errorln(err)
+		os.Exit(1)
+	}
+
 	log.Debug("Data Input")
 	log.Debug(result)
+	log.Debug(pkt)
 
 	for {
 		serial.Write(packet.IncomePacket{
@@ -71,7 +77,15 @@ func main() {
 			os.Exit(1)
 		}
 
+		pkt, err := packet.ParseOutcomePacket(result)
+		if err != nil {
+			log.Errorln("에러가 발생했습니다.")
+			log.Errorln(err)
+			os.Exit(1)
+		}
+
 		log.Debug("기기에서 전송된 데이터: ")
+		log.Debug(pkt)
 		log.Debug(result)
 	}
 }
