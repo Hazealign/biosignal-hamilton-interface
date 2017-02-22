@@ -2,6 +2,7 @@ package packet
 
 import (
 	"errors"
+	"math"
 	"reflect"
 )
 
@@ -174,4 +175,35 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 	}
 
 	return OutcomePacket{}, errors.New("Invalid Outcome Packet!")
+}
+
+func ConvertBitWaveform(high byte, low byte) []uint8 {
+	var retVal = []uint8{}
+
+	for i := uint(0); i < 6; i++ {
+		retVal = append(retVal, low&(1<<i)>>i)
+	}
+
+	for i := uint(0); i < 6; i++ {
+		retVal = append(retVal, high&(1<<i)>>i)
+	}
+
+	// Reverse Array
+	for i, j := 0, len(retVal)-1; i < j; i, j = i+1, j-1 {
+		retVal[i], retVal[j] = retVal[j], retVal[i]
+	}
+
+	return retVal
+}
+
+func BitArrayToInteger(bitArray []uint8) float64 {
+	var retVal = float64(0)
+
+	for i := len(bitArray) - 1; i >= 0; i-- {
+		if bitArray[i] == 1 {
+			retVal = retVal + math.Pow(2, float64(len(bitArray) - i - 1))
+		}
+	}
+
+	return retVal
 }

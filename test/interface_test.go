@@ -172,4 +172,16 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 			0x02, 0x43, 0x39, 0x39, 0x39, 0x39, 0x03, 0x0D,
 		}))
 	})
+
+	It("Convert Two Byte to Waveform", func() {
+		byteHigh, byteLow := byte(0x39), byte(0x39)
+		retVal := packet.ConvertBitWaveform(byteHigh, byteLow)
+
+		Ω(retVal).Should(Equal([]uint8{
+			1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1,
+		}))
+
+		Ω(packet.BitArrayToInteger(retVal)).Should(Equal(float64(3705)))
+	})
+
 })

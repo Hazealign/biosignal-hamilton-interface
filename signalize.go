@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/jessevdk/go-flags"
-	"github.com/tarm/serial"
+	"go.bug.st/serial.v1"
 )
 
 var Options struct {
@@ -28,49 +29,49 @@ func main() {
 		os.Exit(1)
 	} else {
 		if Options.Debug {
-			log.Level = logrus.InfoLevel
+			log.Level = logrus.DebugLevel
 		} else {
 			log.Level = logrus.ErrorLevel
 		}
 	}
 
-	config := &serial.Config{
-		Name:     Options.Port,
-		Baud:     9600,
-		Parity:   serial.ParityEven,
-		StopBits: serial.Stop2,
+	config := &serial.Mode{
+		BaudRate: 9600,
+		Parity:   serial.EvenParity,
+		StopBits: serial.TwoStopBits,
 	}
 
-	serial := OpenPort(config)
+	ser := OpenPort(Options.Port, config)
 
-	serial.Write(packet.IncomePacket{
+	ser.Write(packet.IncomePacket{
 		Identifier: 0x56,
 	}.ToBytes())
 
-	result, err := ReadFromSerial(serial)
+	res, err := ReadFromSerial(ser)
 	if err != nil {
 		log.Errorln("에러가 발생했습니다.")
 		log.Errorln(err)
 		os.Exit(1)
 	}
 
-	pkt, err := packet.ParseOutcomePacket(result)
+	pkt, err := packet.ParseOutcomePacket(res)
 	if err != nil {
+		log.Errorln(res)
 		log.Errorln("에러가 발생했습니다.")
 		log.Errorln(err)
 		os.Exit(1)
 	}
 
 	log.Debug("Data Input")
-	log.Debug(result)
+	log.Debug(res)
 	log.Debug(pkt)
 
 	for {
-		serial.Write(packet.IncomePacket{
+		ser.Write(packet.IncomePacket{
 			Identifier: 120,
 		}.ToBytes())
 
-		result, err := ReadFromSerial(serial)
+		result, err := ReadFromSerial(ser)
 		if err != nil {
 			log.Errorln("에러가 발생했습니다.")
 			log.Errorln(err)
@@ -79,6 +80,7 @@ func main() {
 
 		pkt, err := packet.ParseOutcomePacket(result)
 		if err != nil {
+			log.Errorln(pkt)
 			log.Errorln("에러가 발생했습니다.")
 			log.Errorln(err)
 			os.Exit(1)
@@ -90,16 +92,16 @@ func main() {
 	}
 }
 
-func OpenPort(config *serial.Config) (socket *serial.Port) {
+func OpenPort(port string, config *serial.Mode) (socket serial.Port) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorln("3초 후 다시 시도합니다.")
-			time.Sleep(3 * time.Millisecond)
-			OpenPort(config)
+			time.Sleep(3 * time.Second)
+			OpenPort(port, config)
 		}
 	}()
 
-	socket, err := serial.OpenPort(config)
+	socket, err := serial.Open(port, config)
 	if err != nil {
 		log.Errorln("Port를 열지 못했습니다.")
 		log.Errorln(err)
@@ -109,12 +111,12 @@ func OpenPort(config *serial.Config) (socket *serial.Port) {
 	return socket
 }
 
-func ReadFromSerial(serial *serial.Port) (buf []byte, err error) {
+func ReadFromSerial(serial serial.Port) (buf []byte, err error) {
 	tmp_buffer := make([]byte, 1024)
 	n, err := serial.Read(tmp_buffer)
-	if err != nil {
-		return []byte{}, err
+	if n == 0 {
+		return tmp_buffer[:n], errors.New("Timeout or EOF")
 	}
 
-	return tmp_buffer[:n], nil
+	return tmp_buffer[:n], err
 }
