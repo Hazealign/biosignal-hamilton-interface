@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bitly/go-nsq"
+	"github.com/Sirupsen/logrus"
 )
 
 type QueueModel struct {
@@ -32,10 +33,12 @@ func (d *QueueModel) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (d *QueueModel) SendToNSQ(str string) error {
+func SendToNSQ(d QueueModel, str string) error {
 	config := nsq.NewConfig()
 	producer, _ := nsq.NewProducer(str, config)
 
-	err := producer.Publish("Biosignal", []byte(d.MarshalJSON()))
+	jsonVal, _ := d.MarshalJSON()
+	logrus.Println(string(jsonVal))
+	err := producer.Publish("Biosignal", jsonVal)
 	return err
 }

@@ -17,7 +17,7 @@ import (
 var Options struct {
 	Debug      bool   `short:"d" long:"debug" description:"Enable Debug Mode." optional:"true"`
 	Port       string `short:"p" long:"port" description:"Port which connected with Device" required:"true"`
-	NsqAddress string `short:"a" long:"address" description:"Address of NSQ Server" required: "true"`
+	NsqAddress string `short:"a" long:"address" description:"Address of NSQ Server" required:"true"`
 }
 
 var log = logrus.New()
@@ -96,49 +96,49 @@ func main() {
 		log.Debug(pkt)
 		log.Debug(result)
 
-		err1 := mq.QueueModel{
+		err1 := mq.SendToNSQ(mq.QueueModel{
 			TIMESTAMP: time.Now(),
 			TYPE:      "P_PATIENT",
 			HOST:      host,
 			UNIT:      "",
 			UDID:      udid,
 			P_PATIENT: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.PPatientHigh, pkt.PPatientLow)),
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.PPatientHigh, pkt.PPatientLow)) - 2048,
 			},
-		}.SendToNSQ(Options.NsqAddress)
+		}, Options.NsqAddress)
 
-		err2 := mq.QueueModel{
+		err2 := mq.SendToNSQ(mq.QueueModel{
 			TIMESTAMP: time.Now(),
 			TYPE:      "P_OPTIONAL",
 			HOST:      host,
 			UNIT:      "",
 			UDID:      udid,
 			P_OPTIONAL: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.POptionalHigh, pkt.POptionalLow)),
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.POptionalHigh, pkt.POptionalLow)) - 2048,
 			},
-		}.SendToNSQ(Options.NsqAddress)
+		}, Options.NsqAddress)
 
-		err3 := mq.QueueModel{
+		err3 := mq.SendToNSQ(mq.QueueModel{
 			TIMESTAMP: time.Now(),
 			TYPE:      "FLOW",
 			HOST:      host,
 			UNIT:      "",
 			UDID:      udid,
 			FLOW: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.FlowHigh, pkt.FlowLow)),
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.FlowHigh, pkt.FlowLow)) - 2048,
 			},
-		}.SendToNSQ(Options.NsqAddress)
+		}, Options.NsqAddress)
 
-		err4 := mq.QueueModel{
+		err4 := mq.SendToNSQ(mq.QueueModel{
 			TIMESTAMP: time.Now(),
 			TYPE:      "VOLUME",
 			HOST:      host,
 			UNIT:      "",
 			UDID:      udid,
 			VOLUME: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.VolumeHigh, pkt.VolumeLow)),
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.VolumeHigh, pkt.VolumeLow)) - 2048,
 			},
-		}.SendToNSQ(Options.NsqAddress)
+		}, Options.NsqAddress)
 
 		var errs = []error{err1, err2, err3, err4}
 		for _, err := range errs {
@@ -171,6 +171,7 @@ func OpenPort(port string, config *serial.Mode) (socket serial.Port) {
 }
 
 func ReadFromSerial(serial serial.Port) (buf []byte, err error) {
+	time.Sleep(1 * time.Second)
 	tmp_buffer := make([]byte, 1024)
 	n, err := serial.Read(tmp_buffer)
 	if n == 0 {
@@ -189,4 +190,6 @@ func GetHostAddress() string {
 			}
 		}
 	}
+
+	return "ERROR"
 }
