@@ -181,7 +181,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 			1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1,
 		}))
 
-		Ω(packet.BitArrayToInteger(retVal)).Should(Equal(float64(3705)))
+		Ω(packet.BitArrayToInteger(retVal)).Should(Equal(int(3705)))
 	})
 
 })

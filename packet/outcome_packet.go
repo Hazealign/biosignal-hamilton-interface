@@ -15,10 +15,10 @@ type OutcomePacket struct {
 
 	// Optional Values
 	VentilatorStatus byte
-	pPatientLow      byte
-	pPatientHigh     byte
-	pOptionalLow     byte
-	pOptionalHigh    byte
+	PPatientLow      byte
+	PPatientHigh     byte
+	POptionalLow     byte
+	POptionalHigh    byte
 	FlowLow          byte
 	FlowHigh         byte
 	VolumeLow        byte
@@ -196,12 +196,12 @@ func ConvertBitWaveform(high byte, low byte) []uint8 {
 	return retVal
 }
 
-func BitArrayToInteger(bitArray []uint8) float64 {
-	var retVal = float64(0)
+func BitArrayToInteger(bitArray []uint8) int {
+	var retVal = int(0)
 
 	for i := len(bitArray) - 1; i >= 0; i-- {
 		if bitArray[i] == 1 {
-			retVal = retVal + math.Pow(2, float64(len(bitArray) - i - 1))
+			retVal = retVal + int(math.Pow(2, float64(len(bitArray)-i-1)))
 		}
 	}
 

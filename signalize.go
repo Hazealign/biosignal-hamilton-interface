@@ -2,9 +2,11 @@ package main
 
 import (
 	"errors"
+	"net"
 	"os"
 	"time"
 
+	"biosignal-hamilton-interface/mq"
 	"biosignal-hamilton-interface/packet"
 
 	"github.com/Sirupsen/logrus"
@@ -13,8 +15,9 @@ import (
 )
 
 var Options struct {
-	Debug bool   `short:"d" long:"debug" description:"Enable Debug Mode." optional:"true"`
-	Port  string `short:"p" long:"port" description:"Port which connected with Device" required:"true"`
+	Debug      bool   `short:"d" long:"debug" description:"Enable Debug Mode." optional:"true"`
+	Port       string `short:"p" long:"port" description:"Port which connected with Device" required:"true"`
+	NsqAddress string `short:"a" long:"address" description:"Address of NSQ Server" required: "true"`
 }
 
 var log = logrus.New()
@@ -65,6 +68,9 @@ func main() {
 	log.Debug("Data Input")
 	log.Debug(res)
 	log.Debug(pkt)
+	var udid = string(pkt.Values)
+
+	var host = GetHostAddress() + ":" + Options.Port
 
 	for {
 		ser.Write(packet.IncomePacket{
@@ -89,6 +95,59 @@ func main() {
 		log.Debug("기기에서 전송된 데이터: ")
 		log.Debug(pkt)
 		log.Debug(result)
+
+		err1 := mq.QueueModel{
+			TIMESTAMP: time.Now(),
+			TYPE:      "P_PATIENT",
+			HOST:      host,
+			UNIT:      "",
+			UDID:      udid,
+			P_PATIENT: []int{
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.PPatientHigh, pkt.PPatientLow)),
+			},
+		}.SendToNSQ(Options.NsqAddress)
+
+		err2 := mq.QueueModel{
+			TIMESTAMP: time.Now(),
+			TYPE:      "P_OPTIONAL",
+			HOST:      host,
+			UNIT:      "",
+			UDID:      udid,
+			P_OPTIONAL: []int{
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.POptionalHigh, pkt.POptionalLow)),
+			},
+		}.SendToNSQ(Options.NsqAddress)
+
+		err3 := mq.QueueModel{
+			TIMESTAMP: time.Now(),
+			TYPE:      "FLOW",
+			HOST:      host,
+			UNIT:      "",
+			UDID:      udid,
+			FLOW: []int{
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.FlowHigh, pkt.FlowLow)),
+			},
+		}.SendToNSQ(Options.NsqAddress)
+
+		err4 := mq.QueueModel{
+			TIMESTAMP: time.Now(),
+			TYPE:      "VOLUME",
+			HOST:      host,
+			UNIT:      "",
+			UDID:      udid,
+			VOLUME: []int{
+				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.VolumeHigh, pkt.VolumeLow)),
+			},
+		}.SendToNSQ(Options.NsqAddress)
+
+		var errs = []error{err1, err2, err3, err4}
+		for _, err := range errs {
+			if err != nil {
+				log.Errorln("NSQ에 보내는 중 오류가 발생하였습니다.")
+				log.Errorln(err)
+				panic(err)
+			}
+		}
 	}
 }
 
@@ -119,4 +178,15 @@ func ReadFromSerial(serial serial.Port) (buf []byte, err error) {
 	}
 
 	return tmp_buffer[:n], err
+}
+
+func GetHostAddress() string {
+	addresses, _ := net.InterfaceAddrs()
+	for _, a := range addresses {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
 }
