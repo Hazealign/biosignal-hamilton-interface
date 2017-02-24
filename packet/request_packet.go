@@ -15,7 +15,7 @@ func (packet RequestPacket) GetType() (result string) {
 	return TypeIntString[int(packet.Identifier)]
 }
 
-func ParseIncomePacket(raw []byte) (result RequestPacket, err error) {
+func ParseRequestPacket(raw []byte) (result RequestPacket, err error) {
 	if len(raw) != 4 {
 		return RequestPacket{}, errors.New("Invalid Packet Length")
 	}

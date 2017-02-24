@@ -14,9 +14,9 @@ func TestSignalize(t *testing.T) {
 	RunSpecs(t, "BiosignalHamiltonInterface Suite")
 }
 
-var IncomePacket = Describe("Income Packet", func() {
+var RequestPacket = Describe("Income Packet", func() {
 	It("Encoding", func() {
-		var bytes = packet.IncomePacket{
+		var bytes = packet.RequestPacket{
 			Identifier: byte(0x40),
 		}.ToBytes()
 
@@ -28,10 +28,10 @@ var IncomePacket = Describe("Income Packet", func() {
 	It("Decoding - Valid", func() {
 		var bytes = []byte{0x02, 0x40, 0x03, 0x0D}
 
-		pkt, err := packet.ParseIncomePacket(bytes)
+		pkt, err := packet.ParseRequestPacket(bytes)
 
 		Ω(err).Should(BeNil())
-		Ω(pkt).Should(Equal(packet.IncomePacket{
+		Ω(pkt).Should(Equal(packet.RequestPacket{
 			Identifier: 0x40,
 		}))
 	})
@@ -39,19 +39,19 @@ var IncomePacket = Describe("Income Packet", func() {
 	It("Decoding - Invalid", func() {
 		var bytes = []byte{0x02, 0x03, 0x0D}
 
-		pkt, err := packet.ParseIncomePacket(bytes)
+		pkt, err := packet.ParseRequestPacket(bytes)
 
 		Ω(err).ShouldNot(BeNil())
 		Ω(pkt.Identifier).Should(BeZero())
 	})
 })
 
-var OutcomePacket = Describe("Outcome Packet Decoder", func() {
+var ResponsePacket = Describe("Outcome Packet Decoder", func() {
 	// Check Invalid Packet
 	It("Decoding - Invalid", func() {
 		var bytes = []byte{0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD}
 
-		pkt, err := packet.ParseOutcomePacket(bytes)
+		pkt, err := packet.ParseResponsePacket(bytes)
 
 		Ω(err).ShouldNot(BeNil())
 		Ω(pkt.ResponseType).Should(BeZero())
@@ -61,7 +61,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	It("Decoding RERRROR", func() {
 		var bytes = []byte{0x02, 0x52, 0x45, 0x52, 0x52, 0x4F, 0x52, 0x03, 0x0D}
 
-		pkt, err := packet.ParseOutcomePacket(bytes)
+		pkt, err := packet.ParseResponsePacket(bytes)
 
 		Ω(err).Should(BeNil())
 		Ω(pkt.ResponseType).Should(Equal(packet.RESP_TYPE_RERROR))
@@ -70,7 +70,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	It("Decoding Type A", func() {
 		var bytes = []byte{0x02, 30, 0x00, 0x01, 0x02, 0x03, 46, 0x03, 0x0D}
 
-		pkt, err := packet.ParseOutcomePacket(bytes)
+		pkt, err := packet.ParseResponsePacket(bytes)
 
 		Ω(err).Should(BeNil())
 		Ω(pkt.ResponseType).Should(Equal(packet.RESP_TYPE_A))
@@ -81,7 +81,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	It("Decoding Type B - Format 1", func() {
 		var bytes = []byte{0x02, 0x7C, 0x47, 0x30, 0x32, 0x30, 0x30, 0x03, 0x0D}
 
-		pkt, err := packet.ParseOutcomePacket(bytes)
+		pkt, err := packet.ParseResponsePacket(bytes)
 
 		Ω(err).Should(BeNil())
 		Ω(pkt.ResponseType).Should(Equal(packet.RESP_TYPE_B_FORMAT_1))
@@ -93,7 +93,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	It("Decoding Type B - Format 2", func() {
 		var bytes = []byte{0x02, 0x41, 0x35, 0x33, 0x34, 0x32, 0x6A, 0x03, 0x0D}
 
-		pkt, err := packet.ParseOutcomePacket(bytes)
+		pkt, err := packet.ParseResponsePacket(bytes)
 
 		Ω(err).Should(BeNil())
 		Ω(pkt.ResponseType).Should(Equal(packet.RESP_TYPE_B_FORMAT_2))
@@ -105,7 +105,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	It("Decoding Type B - Format 3", func() {
 		var bytes = []byte{0x02, 0x43, 0x39, 0x39, 0x39, 0x39, 0x03, 0x0D}
 
-		pkt, err := packet.ParseOutcomePacket(bytes)
+		pkt, err := packet.ParseResponsePacket(bytes)
 
 		Ω(err).Should(BeNil())
 		Ω(pkt.ResponseType).Should(Equal(packet.RESP_TYPE_B_FORMAT_3))
@@ -115,7 +115,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	})
 
 	It("Encoding RERROR", func() {
-		var bytes = packet.OutcomePacket{
+		var bytes = packet.ResponsePacket{
 			ResponseType: packet.RESP_TYPE_RERROR,
 		}.ToBytes()
 
@@ -125,7 +125,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	})
 
 	It("Encoding Type A", func() {
-		var bytes = packet.OutcomePacket{
+		var bytes = packet.ResponsePacket{
 			ResponseType: packet.RESP_TYPE_A,
 			Identifier:   byte(30),
 			Values:       []byte{0x00, 0x01, 0x02, 0x03, 46},
@@ -137,7 +137,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	})
 
 	It("Encoding Type B - Format 1", func() {
-		var bytes = packet.OutcomePacket{
+		var bytes = packet.ResponsePacket{
 			ResponseType:     packet.RESP_TYPE_B_FORMAT_1,
 			Identifier:       byte(0x7C),
 			DeviceIdentifier: []byte{0x47},
@@ -150,7 +150,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	})
 
 	It("Encoding Type B - Format 2", func() {
-		var bytes = packet.OutcomePacket{
+		var bytes = packet.ResponsePacket{
 			ResponseType:     packet.RESP_TYPE_B_FORMAT_2,
 			DeviceIdentifier: []byte{0x41, 0x35},
 			Values:           []byte{0x33, 0x34, 0x32, 0x6A},
@@ -162,7 +162,7 @@ var OutcomePacket = Describe("Outcome Packet Decoder", func() {
 	})
 
 	It("Encoding Type B - Format 3", func() {
-		var bytes = packet.OutcomePacket{
+		var bytes = packet.ResponsePacket{
 			ResponseType:     packet.RESP_TYPE_B_FORMAT_3,
 			DeviceIdentifier: []byte{0x43},
 			Values:           []byte{0x39, 0x39, 0x39, 0x39},
