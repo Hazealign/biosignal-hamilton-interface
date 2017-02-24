@@ -12,6 +12,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/jessevdk/go-flags"
 	"go.bug.st/serial.v1"
+	"crypto/sha1"
+	"encoding/hex"
 )
 
 var Options struct {
@@ -68,7 +70,10 @@ func main() {
 	log.Debug("Data Input")
 	log.Debug(res)
 	log.Debug(pkt)
-	var udid = string(pkt.Values)
+	crypt := sha1.New()
+	crypt.Write(pkt.Values)
+	result := hex.EncodeToString(crypt.Sum(nil))
+	var udid = string(result)
 
 	var host = GetHostAddress() + ":" + Options.Port
 
@@ -86,6 +91,7 @@ func main() {
 
 		pkt, err := packet.ParseOutcomePacket(result)
 		if err != nil {
+			log.Errorln(result)
 			log.Errorln(pkt)
 			log.Errorln("에러가 발생했습니다.")
 			log.Errorln(err)
@@ -171,7 +177,8 @@ func OpenPort(port string, config *serial.Mode) (socket serial.Port) {
 }
 
 func ReadFromSerial(serial serial.Port) (buf []byte, err error) {
-	time.Sleep(1 * time.Second)
+	// sleep must be more than 36 millisecond
+	time.Sleep(36 * time.Millisecond)
 	tmp_buffer := make([]byte, 1024)
 	n, err := serial.Read(tmp_buffer)
 	if n == 0 {

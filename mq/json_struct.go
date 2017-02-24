@@ -29,7 +29,7 @@ func (d *QueueModel) MarshalJSON() ([]byte, error) {
 		TIMESTAMP string `json:"TIMESTAMP"`
 	}{
 		Alias:     (*Alias)(d),
-		TIMESTAMP: d.TIMESTAMP.Format("Mon Jan _2"),
+		TIMESTAMP: d.TIMESTAMP.Format(time.RFC3339),
 	})
 }
 
