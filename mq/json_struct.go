@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/bitly/go-nsq"
 	"github.com/Sirupsen/logrus"
+	"github.com/bitly/go-nsq"
 )
 
 type QueueModel struct {
