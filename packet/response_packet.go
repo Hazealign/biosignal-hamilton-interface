@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-type OutcomePacket struct {
+type ResponsePacket struct {
 	// Important Values
 	ResponseType     int
 	Identifier       byte
@@ -27,7 +27,7 @@ type OutcomePacket struct {
 	PCO2High         byte
 }
 
-func (packet OutcomePacket) ToBytes() (result []byte) {
+func (packet ResponsePacket) ToBytes() (result []byte) {
 	var r_error = []byte{
 		0x02, 0x52, 0x45, 0x52, 0x52, 0x4F, 0x52, 0x03, 0x0D,
 	}
@@ -78,21 +78,21 @@ func (packet OutcomePacket) ToBytes() (result []byte) {
 	return r_error
 }
 
-func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
+func ParseResponsePacket(raw []byte) (result ResponsePacket, err error) {
 	var r_error = []byte{
 		0x02, 0x52, 0x45, 0x52, 0x52, 0x4F, 0x52, 0x03, 0x0D,
 	}
 
 	// 0. Check packet is rerror
 	if reflect.DeepEqual(r_error, raw) {
-		return OutcomePacket{
+		return ResponsePacket{
 			ResponseType: RESP_TYPE_RERROR,
 		}, nil
 	}
 
 	// 1. check raw packet's length
 	if len(raw) == 8 {
-		return OutcomePacket{
+		return ResponsePacket{
 			ResponseType:     RESP_TYPE_B_FORMAT_3,
 			DeviceIdentifier: []byte{raw[1]},
 			Values:           raw[2:6],
@@ -102,7 +102,7 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 	// 2. check parameter identifier
 	if len(raw) == 13 {
 		if int(raw[1]) == 34 {
-			return OutcomePacket{
+			return ResponsePacket{
 				ResponseType:     RESP_TYPE_C_34,
 				Identifier:       raw[1],
 				VentilatorStatus: raw[2],
@@ -116,7 +116,7 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 				PCO2High:         raw[10],
 			}, nil
 		} else {
-			return OutcomePacket{
+			return ResponsePacket{
 				ResponseType:     RESP_TYPE_C_120,
 				Identifier:       raw[1],
 				VentilatorStatus: raw[2],
@@ -148,25 +148,25 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 		} else if identifier >= 124 && identifier <= 127 {
 			flag = RESP_TYPE_B_FORMAT_1
 		} else {
-			return OutcomePacket{}, errors.New("Invalid Outcome Packet!")
+			return ResponsePacket{}, errors.New("Invalid Outcome Packet!")
 		}
 
 		switch flag {
 		case RESP_TYPE_A:
-			return OutcomePacket{
+			return ResponsePacket{
 				ResponseType: RESP_TYPE_A,
 				Identifier:   raw[1],
 				Values:       raw[2:7],
 			}, nil
 		case RESP_TYPE_B_FORMAT_1:
-			return OutcomePacket{
+			return ResponsePacket{
 				ResponseType:     RESP_TYPE_B_FORMAT_1,
 				Identifier:       raw[1],
 				DeviceIdentifier: []byte{raw[2]},
 				Values:           raw[3:7],
 			}, nil
 		case RESP_TYPE_B_FORMAT_2:
-			return OutcomePacket{
+			return ResponsePacket{
 				ResponseType:     RESP_TYPE_B_FORMAT_2,
 				DeviceIdentifier: raw[1:3],
 				Values:           raw[3:7],
@@ -174,7 +174,7 @@ func ParseOutcomePacket(raw []byte) (result OutcomePacket, err error) {
 		}
 	}
 
-	return OutcomePacket{}, errors.New("Invalid Outcome Packet!")
+	return ResponsePacket{}, errors.New("Invalid Outcome Packet!")
 }
 
 func ConvertBitWaveform(high byte, low byte) []uint8 {

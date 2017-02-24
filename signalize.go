@@ -9,11 +9,12 @@ import (
 	"biosignal-hamilton-interface/mq"
 	"biosignal-hamilton-interface/packet"
 
+	"crypto/sha1"
+	"encoding/hex"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/jessevdk/go-flags"
 	"go.bug.st/serial.v1"
-	"crypto/sha1"
-	"encoding/hex"
 )
 
 var Options struct {
@@ -48,7 +49,7 @@ func main() {
 
 	ser := OpenPort(Options.Port, config)
 
-	ser.Write(packet.IncomePacket{
+	ser.Write(packet.RequestPacket{
 		Identifier: 0x56,
 	}.ToBytes())
 
@@ -59,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	pkt, err := packet.ParseOutcomePacket(res)
+	pkt, err := packet.ParseResponsePacket(res)
 	if err != nil {
 		log.Errorln(res)
 		log.Errorln("에러가 발생했습니다.")
@@ -78,7 +79,7 @@ func main() {
 	var host = GetHostAddress() + ":" + Options.Port
 
 	for {
-		ser.Write(packet.IncomePacket{
+		ser.Write(packet.RequestPacket{
 			Identifier: 120,
 		}.ToBytes())
 
@@ -89,7 +90,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		pkt, err := packet.ParseOutcomePacket(result)
+		pkt, err := packet.ParseResponsePacket(result)
 		if err != nil {
 			log.Errorln(result)
 			log.Errorln(pkt)
