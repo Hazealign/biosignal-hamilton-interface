@@ -9,20 +9,23 @@ import (
 )
 
 type QueueModel struct {
-	TIMESTAMP  time.Time
-	TYPE       string
-	PORT       string
-	HOST       string
-	UNIT       string
-	UDID       string
-	P_PATIENT  []int
-	P_OPTIONAL []int
-	FLOW       []int
-	VOLUME     []int
-	PCO2       []int
+	TIMESTAMP      time.Time
+	TYPE           string
+	KEY            string
+	PORT           string
+	HOST           string
+	VALUE_UNIT     string
+	UDID           string
+	DEVICE         string
+	NUMERIC_VALUE  float64
+	WAVEFORM_VALUE []int
+	PATIENT_ID     string
 }
 
 func (d *QueueModel) MarshalJSON() ([]byte, error) {
+	d.DEVICE = "Hamilton"
+	d.PATIENT_ID = "TEST_ID"
+
 	type Alias QueueModel
 	return json.Marshal(&struct {
 		*Alias
@@ -34,6 +37,9 @@ func (d *QueueModel) MarshalJSON() ([]byte, error) {
 }
 
 func SendToNSQ(d QueueModel, str string) error {
+	d.DEVICE = "Hamilton"
+	d.PATIENT_ID = "TEST_ID"
+
 	config := nsq.NewConfig()
 	producer, _ := nsq.NewProducer(str, config)
 

@@ -1,16 +1,16 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"net"
 	"os"
+	"strconv"
 	"time"
 
 	"biosignal-hamilton-interface/mq"
 	"biosignal-hamilton-interface/packet"
-
-	"crypto/sha1"
-	"encoding/hex"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/jessevdk/go-flags"
@@ -24,6 +24,13 @@ var Options struct {
 }
 
 var log = logrus.New()
+
+// 가져와야할 Numeric Values
+var list = []byte{
+	40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 87, 104, 105, 106, 107, 108, 110, 111,
+	35, 36, 37, 38, 39, 60, 61, 62, 63, 64, 65, 66, 67, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+	103, 113, 114, 115, 116, 117, 118, 120, 121, 122,
+}
 
 func main() {
 	log.Formatter = new(logrus.TextFormatter)
@@ -75,85 +82,148 @@ func main() {
 	crypt.Write(pkt.Values)
 	result := hex.EncodeToString(crypt.Sum(nil))
 	var udid = string(result)
-
 	var host = GetHostAddress() + ":" + Options.Port
 
+	var index = 0
 	for {
 		ser.Write(packet.RequestPacket{
 			Identifier: 120,
 		}.ToBytes())
 
-		result, err := ReadFromSerial(ser)
+		ReceiveWaveforms(ser, udid, host)
+
+		ser.Write(packet.RequestPacket{
+			Identifier: list[index%len(list)],
+		}.ToBytes())
+
+		ReceiveNumerics(int(list[index%len(list)]), ser, udid, host)
+		if index == len(list)*20 {
+			index = 1
+		} else {
+			index += 1
+		}
+	}
+}
+
+func ReceiveWaveforms(ser serial.Port, udid string, host string) {
+	result, err := ReadFromSerial(ser)
+	if err != nil {
+		log.Errorln("에러가 발생했습니다.")
+		log.Errorln(err)
+		os.Exit(1)
+	}
+
+	pkt, err := packet.ParseResponsePacket(result)
+	if err != nil {
+		log.Errorln(result)
+		log.Errorln(pkt)
+		log.Errorln("에러가 발생했습니다.")
+		log.Errorln(err)
+		os.Exit(1)
+	}
+
+	log.Debug("기기에서 전송된 데이터: ")
+	log.Debug(pkt)
+	log.Debug(result)
+
+	err1 := mq.SendToNSQ(mq.QueueModel{
+		TIMESTAMP:  time.Now(),
+		KEY:        "P_PATIENT",
+		TYPE:       "Waveform",
+		HOST:       host,
+		VALUE_UNIT: "",
+		UDID:       udid,
+		WAVEFORM_VALUE: []int{
+			packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.PPatientHigh, pkt.PPatientLow)) - 2048,
+		},
+	}, Options.NsqAddress)
+
+	err2 := mq.SendToNSQ(mq.QueueModel{
+		TIMESTAMP:  time.Now(),
+		KEY:        "P_OPTIONAL",
+		TYPE:       "Waveform",
+		HOST:       host,
+		VALUE_UNIT: "",
+		UDID:       udid,
+		WAVEFORM_VALUE: []int{
+			packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.POptionalHigh, pkt.POptionalLow)) - 2048,
+		},
+	}, Options.NsqAddress)
+
+	err3 := mq.SendToNSQ(mq.QueueModel{
+		TIMESTAMP:  time.Now(),
+		KEY:        "FLOW",
+		TYPE:       "Waveform",
+		HOST:       host,
+		VALUE_UNIT: "",
+		UDID:       udid,
+		WAVEFORM_VALUE: []int{
+			packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.FlowHigh, pkt.FlowLow)) - 2048,
+		},
+	}, Options.NsqAddress)
+
+	err4 := mq.SendToNSQ(mq.QueueModel{
+		TIMESTAMP:  time.Now(),
+		KEY:        "VOLUME",
+		TYPE:       "Waveform",
+		HOST:       host,
+		VALUE_UNIT: "",
+		UDID:       udid,
+		WAVEFORM_VALUE: []int{
+			packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.VolumeHigh, pkt.VolumeLow)) - 2048,
+		},
+	}, Options.NsqAddress)
+
+	var errs = []error{err1, err2, err3, err4}
+	for _, err := range errs {
 		if err != nil {
-			log.Errorln("에러가 발생했습니다.")
+			log.Errorln("NSQ에 보내는 중 오류가 발생하였습니다.")
 			log.Errorln(err)
-			os.Exit(1)
+			panic(err)
+		}
+	}
+}
+
+func ReceiveNumerics(identifier int, ser serial.Port, udid string, host string) {
+	result, err := ReadFromSerial(ser)
+	if err != nil {
+		log.Errorln("에러가 발생했습니다.")
+		log.Errorln(err)
+		os.Exit(1)
+	}
+
+	pkt, err := packet.ParseResponsePacket(result)
+	if err != nil {
+		log.Errorln(result)
+		log.Errorln(pkt)
+		log.Errorln("에러가 발생했습니다.")
+		log.Errorln(err)
+		os.Exit(1)
+	}
+
+	log.Debug("기기에서 전송된 데이터: ")
+	log.Debug(pkt)
+	log.Debug(result)
+
+	var strVal = string(pkt.Values)
+	floatVal, err := strconv.ParseFloat(strVal, 64)
+
+	if err != nil {
+		var model = mq.QueueModel{
+			TIMESTAMP:     time.Now(),
+			KEY:           packet.TypeIntString[identifier],
+			TYPE:          "Numeric",
+			HOST:          host,
+			VALUE_UNIT:    "",
+			UDID:          udid,
+			NUMERIC_VALUE: floatVal,
 		}
 
-		pkt, err := packet.ParseResponsePacket(result)
+		err := mq.SendToNSQ(model, Options.NsqAddress)
 		if err != nil {
-			log.Errorln(result)
-			log.Errorln(pkt)
-			log.Errorln("에러가 발생했습니다.")
+			log.Errorln("NSQ에 보내는 중 오류가 발생하였습니다.")
 			log.Errorln(err)
-			os.Exit(1)
-		}
-
-		log.Debug("기기에서 전송된 데이터: ")
-		log.Debug(pkt)
-		log.Debug(result)
-
-		err1 := mq.SendToNSQ(mq.QueueModel{
-			TIMESTAMP: time.Now(),
-			TYPE:      "P_PATIENT",
-			HOST:      host,
-			UNIT:      "",
-			UDID:      udid,
-			P_PATIENT: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.PPatientHigh, pkt.PPatientLow)) - 2048,
-			},
-		}, Options.NsqAddress)
-
-		err2 := mq.SendToNSQ(mq.QueueModel{
-			TIMESTAMP: time.Now(),
-			TYPE:      "P_OPTIONAL",
-			HOST:      host,
-			UNIT:      "",
-			UDID:      udid,
-			P_OPTIONAL: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.POptionalHigh, pkt.POptionalLow)) - 2048,
-			},
-		}, Options.NsqAddress)
-
-		err3 := mq.SendToNSQ(mq.QueueModel{
-			TIMESTAMP: time.Now(),
-			TYPE:      "FLOW",
-			HOST:      host,
-			UNIT:      "",
-			UDID:      udid,
-			FLOW: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.FlowHigh, pkt.FlowLow)) - 2048,
-			},
-		}, Options.NsqAddress)
-
-		err4 := mq.SendToNSQ(mq.QueueModel{
-			TIMESTAMP: time.Now(),
-			TYPE:      "VOLUME",
-			HOST:      host,
-			UNIT:      "",
-			UDID:      udid,
-			VOLUME: []int{
-				packet.BitArrayToInteger(packet.ConvertBitWaveform(pkt.VolumeHigh, pkt.VolumeLow)) - 2048,
-			},
-		}, Options.NsqAddress)
-
-		var errs = []error{err1, err2, err3, err4}
-		for _, err := range errs {
-			if err != nil {
-				log.Errorln("NSQ에 보내는 중 오류가 발생하였습니다.")
-				log.Errorln(err)
-				panic(err)
-			}
+			panic(err)
 		}
 	}
 }
