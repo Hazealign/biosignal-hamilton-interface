@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"time"
 
-	"biosignal-hamilton-interface/mq"
-	"biosignal-hamilton-interface/packet"
+	"github.com/Hazealign/biosignal-hamilton-interface/mq"
+	"github.com/Hazealign/biosignal-hamilton-interface/packet"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/jessevdk/go-flags"
+	"github.com/sirupsen/logrus"
 	"go.bug.st/serial.v1"
 )
 
@@ -33,6 +33,7 @@ var list = []byte{
 }
 
 func main() {
+	// 사용자가 입력한 포트 받아오기
 	log.Formatter = new(logrus.TextFormatter)
 	log.Out = os.Stdout
 
@@ -48,16 +49,18 @@ func main() {
 		}
 	}
 
+	// Serial 연결 설정 (Spec 문서 2.1)
 	config := &serial.Mode{
 		BaudRate: 9600,
 		Parity:   serial.EvenParity,
 		StopBits: serial.TwoStopBits,
 	}
 
+	// Serial 포트 연결
 	ser := OpenPort(Options.Port, config)
-
 	ser.Write(packet.RequestPacket{
-		Identifier: 0x56,
+		Identifier: 0x56, // 0x56==86
+		// Identifier 86은 Ventilator 번호를 받아올 수 있음
 	}.ToBytes())
 
 	res, err := ReadFromSerial(ser)
@@ -83,8 +86,8 @@ func main() {
 	result := hex.EncodeToString(crypt.Sum(nil))
 	var udid = string(result)
 	var host = GetHostAddress() + ":" + Options.Port
-
 	var index = 0
+
 	for {
 		ser.Write(packet.RequestPacket{
 			Identifier: 120,
